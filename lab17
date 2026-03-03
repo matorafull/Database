@@ -1,0 +1,78 @@
+PS C:\Users\ELD> cd "C:\Program Files\PostgreSQL\17\bin"
+PS C:\Users\ELD> psql -U postgres
+Password for user postgres:
+
+psql (17.6)
+WARNING: Console code page (437) differs from Windows code page (1252)
+         8-bit characters might not work correctly. See psql reference
+         page "Notes for Windows users" for details.
+Type "help" for help.
+
+postgres=# COPY employees TO 'C:\export\employees.csv' WITH CSV HEADER;
+COPY 25
+
+postgres=# COPY employees FROM 'C:\export\employees.csv' WITH CSV HEADER;
+COPY 25
+
+postgres=# COPY employees TO 'C:\export\employees.txt' WITH DELIMITER '|' NULL 'N/A' CSV HEADER;
+COPY 25
+
+postgres=# COPY employees(first_name, last_name, email)
+postgres-# FROM 'C:\export\new_employees.csv' WITH CSV HEADER;
+COPY 10
+
+postgres=# COPY (SELECT * FROM employees WHERE department = 'IT')
+postgres-# TO 'C:\export\it_employees.csv' WITH CSV HEADER;
+COPY 6
+
+postgres=# COPY products TO 'C:\export\products.csv' WITH CSV HEADER;
+COPY 50
+
+postgres=# COPY customers TO 'C:\export\customers.csv'
+postgres-# WITH CSV HEADER DELIMITER ';' QUOTE '"';
+COPY 15
+
+postgres=# COPY orders TO 'C:\export\orders.csv' WITH CSV HEADER FORCE_QUOTE (order_date);
+COPY 40
+
+
+
+postgres=# COPY products FROM 'C:\export\products.csv' WITH CSV HEADER;
+COPY 50
+
+postgres=# COPY products FROM 'C:\export\products_with_errors.csv'
+postgres-# WITH CSV HEADER ON_ERROR IGNORE;
+COPY 48
+
+postgres=# COPY products FROM 'C:\export\products_utf8.csv'
+postgres-# WITH CSV HEADER ENCODING 'UTF8';
+COPY 50
+
+postgres=# COPY customer_feedback TO 'C:\export\feedback.csv'
+postgres-# WITH CSV HEADER DELIMITER ',' QUOTE '"' ESCAPE '"';
+COPY 120
+
+postgres=# COPY sales_data FROM 'C:\export\sales.csv' WITH CSV HEADER NULL 'NULL';
+COPY 75
+
+postgres=# \! cls
+
+PS C:\Program Files\PostgreSQL\17\bin> pg_dump -h localhost -U postgres -d old_db -Fc > migration.dump
+PS C:\Program Files\PostgreSQL\17\bin> pg_restore -h localhost -U postgres -d new_db migration.dump
+
+PS C:\Program Files\PostgreSQL\17\bin> psql -U postgres -d mydb
+postgres=# CREATE TABLE staging_customers AS SELECT * FROM customers WHERE 1=0;
+CREATE TABLE
+postgres=# COPY (SELECT * FROM customers LIMIT 10000 OFFSET 0) TO 'C:\export\customers_batch_1.csv' WITH CSV HEADER;
+COPY 10000
+postgres=# COPY staging_customers FROM 'C:\export\customers_batch_1.csv' WITH CSV HEADER;
+COPY 10000
+postgres=# INSERT INTO customers SELECT * FROM staging_customers ON CONFLICT (customer_id) DO UPDATE SET name = EXCLUDED.name;
+INSERT 0 10000
+postgres=# SELECT COUNT(*) FROM customers;
+ count
+-------
+ 10000
+(1 row)
+
+postgres=# \q
