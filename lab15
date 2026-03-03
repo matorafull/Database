@@ -1,0 +1,147 @@
+PS C:\Users\ELD> cd "C:\Program Files\PostgreSQL\17\bin"
+PS C:\Users\ELD> psql -U postgres
+Password for user postgres:
+
+psql (17.6)
+WARNING: Console code page (437) differs from Windows code page (1252)
+         8-bit characters might not work correctly. See psql reference
+         page "Notes for Windows users" for details.
+Type "help" for help.
+
+postgres=# SELECT first_name, last_name, salary
+postgres-# FROM employees
+postgres-# WHERE salary > (
+postgres(#      SELECT AVG(salary) FROM employees
+postgres(# );
+ first_name | last_name |  salary
+------------+-----------+----------
+ Ben        | Miller    | 78000.00
+ Alice      | Wagner    | 128000.00
+(2 rows)
+
+postgres=# WITH regional_sales AS (
+postgres(#      SELECT region_id, SUM(amount) AS total_sales
+postgres(#      FROM orders
+postgres(#      GROUP BY region_id
+postgres(# )
+postgres-# SELECT region_id, total_sales
+postgres-# FROM regional_sales
+postgres-# WHERE total_sales > 1000000;
+ region_id | total_sales
+-----------+-------------
+         1 |  1620000.00
+(1 row)
+
+postgres=# WITH RECURSIVE org_chart AS (
+postgres(#      SELECT employee_id, first_name, last_name, manager_id
+postgres(#      FROM employees
+postgres(#      WHERE manager_id IS NULL
+postgres(#      UNION ALL
+postgres(#      SELECT e.employee_id, e.first_name, e.last_name, e.manager_id
+postgres(#      FROM employees e
+postgres(#      INNER JOIN org_chart oc ON e.manager_id = oc.employee_id
+postgres(# )
+postgres-# SELECT * FROM org_chart;
+ employee_id | first_name | last_name | manager_id
+-------------+------------+-----------+------------
+           1 | Nathan     | Smith     |
+           4 | Diana      | Moore     |
+           2 | Alice      | Wagner    |          1
+           3 | Ben        | Miller    |          1
+           5 | Eric       | Rossi     |          4
+(5 rows)
+
+postgres=# SELECT product_name FROM warehouse_1
+postgres-# UNION
+postgres-# SELECT product_name FROM warehouse_2;
+ product_name
+--------------
+ Laptop
+ Mouse
+ Monitor
+ Keyboard
+(4 rows)
+
+postgres=# SELECT product_id FROM warehouse_1 WHERE quantity = 0
+postgres-# INTERSECT
+postgres-# SELECT product_id FROM warehouse_2 WHERE quantity = 0;
+ product_id
+------------
+(0 rows)
+
+postgres=# SELECT
+postgres-#      first_name,
+postgres-#      last_name,
+postgres-#      department,
+postgres-#      salary,
+postgres-#      RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS dept_salary_rank
+postgres-# FROM employees;
+ first_name | last_name | department |  salary   | dept_salary_rank
+------------+-----------+------------+-----------+------------------
+ Nathan     | Smith     | Finance    |  91000.00 |                1
+ Alice      | Wagner    | Engineering| 128000.00 |                1
+ Ben        | Miller    | Marketing  |  78000.00 |                1
+ Diana      | Moore     | Sales      |  71000.00 |                1
+ Eric       | Rossi     | HR         |  62000.00 |                1
+(5 rows)
+
+postgres=# SELECT
+postgres-#      product_name,
+postgres-#      SUM(CASE WHEN year = 2022 THEN sales_amount ELSE 0 END) AS year_2022,
+postgres-#      SUM(CASE WHEN year = 2023 THEN sales_amount ELSE 0 END) AS year_2023,
+postgres-#      SUM(CASE WHEN year = 2024 THEN sales_amount ELSE 0 END) AS year_2024
+postgres-# FROM sales
+postgres-# GROUP BY product_name;
+ product_name | year_2022 | year_2023 | year_2024
+--------------+-----------+-----------+-----------
+ Laptop       |  10000.00 |  15000.00 |  18000.00
+ Mouse        |   5000.00 |   8000.00 |   9000.00
+(2 rows)
+
+postgres=# SELECT product_name, '2022' AS year, year_2022 AS sales_amount FROM pivoted_sales
+postgres-# UNION ALL
+postgres-# SELECT product_name, '2023' AS year, year_2023 AS sales_amount FROM pivoted_sales
+postgres-# UNION ALL
+postgres-# SELECT product_name, '2024' AS year, year_2024 AS sales_amount FROM pivoted_sales
+postgres-# ORDER BY product_name, year;
+ product_name | year | sales_amount
+--------------+------+--------------
+ Laptop       | 2022 |     10000.00
+ Laptop       | 2023 |     15000.00
+ Laptop       | 2024 |     18000.00
+ Mouse        | 2022 |      5000.00
+ Mouse        | 2023 |      8000.00
+ Mouse        | 2024 |      9000.00
+(6 rows)
+
+postgres=# SELECT
+postgres-#      employee_id,
+postgres-#      SUM(salary) OVER (PARTITION BY department) AS total_dept_salary,
+postgres-#      AVG(salary) FILTER (WHERE experience_years > 5) OVER () AS avg_salary_senior
+postgres-# FROM employees;
+ employee_id | total_dept_salary | avg_salary_senior
+-------------+-------------------+--------------------
+           1 |          91000.00 | 92000.000000000000
+           2 |         128000.00 | 92000.000000000000
+           3 |          78000.00 | 92000.000000000000
+           4 |          71000.00 | 92000.000000000000
+           5 |          62000.00 | 92000.000000000000
+(5 rows)
+
+postgres=# SELECT product_name, status
+postgres-# FROM orders
+postgres-# ORDER BY
+postgres(#      CASE status
+postgres(#          WHEN 'High Priority' THEN 1
+postgres(#          WHEN 'Medium Priority' THEN 2
+postgres(#          WHEN 'Low Priority' THEN 3
+postgres(#          ELSE 4
+postgres(#      END;
+ product_name |      status
+--------------+-----------------
+ Laptop       | High Priority
+ Mouse        | Medium Priority
+ Monitor      | Low Priority
+(3 rows)
+
+postgres=#
